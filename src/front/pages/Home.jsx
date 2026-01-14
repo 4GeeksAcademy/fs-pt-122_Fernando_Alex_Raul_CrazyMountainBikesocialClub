@@ -1,52 +1,77 @@
-import React, { useEffect } from "react"
-import rigoImageUrl from "../assets/img/rigo-baby.jpg";
-import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
+import { useEffect, useState } from "react";
+import { redirect, useNavigate } from "react-router-dom";
 
-export const Home = () => {
+import "../../styles/home.css";
 
-	const { store, dispatch } = useGlobalReducer()
+import WeeklyKms from "../component/Home/WeeklyKms";
+import StartRouteButton from "../component/Home/StartRouteButton";
+import FeaturedRoutes from "../component/Home/FeaturedRoutes";
+import FriendsActivity from "../component/Home/FriendsActivity";
+import MaintenanceCard from "../component/Maintenance/MaintenanceCard";
 
-	const loadMessage = async () => {
-		try {
-			const backendUrl = import.meta.env.VITE_BACKEND_URL
+const Home = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-			if (!backendUrl) throw new Error("VITE_BACKEND_URL is not defined in .env file")
+  useEffect(() => {
+    // Verifica sesión
+    const token = localStorage.getItem("token");
 
-			const response = await fetch(backendUrl + "/api/hello")
-			const data = await response.json()
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-			if (response.ok) dispatch({ type: "set_hello", payload: data.message })
+    fetch(import.meta.env.VITE_BACKEND_URL + "/api/home", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      setUser(data.user);
+      setLoading(false);
+    });
+  }, [navigate]);
+  
 
-			return data
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
 
-		} catch (error) {
-			if (error.message) throw new Error(
-				`Could not fetch the message from the backend.
-				Please check if the backend is running and the backend port is public.`
-			);
-		}
+  if (loading) {
+    return (
+      <div className="loading">
+        <h2>Bienvenido a ATrail...</h2>
+        <p>Cargando perfil...</p>
+      </div>
+    );
+  }
 
-	}
+  return (
+    <div className="home">
+      <header className="home-header">
+        <h1>Inicio</h1>
+        <button onClick={handleLogout} className="logout-btn">
+          Cerrar sesión
+        </button>
+      </header>
 
-	useEffect(() => {
-		loadMessage()
-	}, [])
-
-	return (
-		<div className="text-center mt-5">
-			<h1 className="display-4">Hello Rigo!!</h1>
-			<p className="lead">
-				<img src={rigoImageUrl} className="img-fluid rounded-circle mb-3" alt="Rigo Baby" />
-			</p>
-			<div className="alert alert-info">
-				{store.message ? (
-					<span>{store.message}</span>
-				) : (
-					<span className="text-danger">
-						Loading message from the backend (make sure your python 🐍 backend is running)...
-					</span>
-				)}
-			</div>
-		</div>
-	);
-}; 
+      <main className="home-content">
+        <WeeklyKms />
+        <StartRouteButton />
+        <FeaturedRoutes />
+        <FriendsActivity />
+        <MaintenanceCard
+          title="Mantenimiento"
+          showTitle={true}
+          showActionButton={false}
+        />
+        <FriendsActivitySection />
+      </main>
+    </div>
+  );
+};
+export default Home;
